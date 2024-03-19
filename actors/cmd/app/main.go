@@ -23,14 +23,15 @@ func main() {
 
 	pool := database.NewPool(context.TODO(), cfg.Storage)
 	repo := repository.NewActorsRepository(pool)
-	handler := handlers.NewActorsHandler(repo)
+	actorsHandler := handlers.NewActorsHandler(repo)
 
 	defer pool.Close()
 
 	r := mux.NewRouter()
 	actorsSubR := r.PathPrefix("/api/v1").Subrouter()
-	// actorsSubR.HandleFunc("/actors", handler.GetAllActors).Methods(http.MethodGet)
-	actorsSubR.HandleFunc("/actors/create", handler.CreateActor).Methods(http.MethodPost)
+	actorsSubR.HandleFunc("/actors", actorsHandler.GetAllActors).Methods(http.MethodGet)
+	actorsSubR.HandleFunc("/actors/{id:[0-9]+}", actorsHandler.GetActorByID).Methods(http.MethodGet)
+	actorsSubR.HandleFunc("/actors/create", actorsHandler.CreateActor).Methods(http.MethodPost)
 
 	log.Fatal(http.ListenAndServe(":8080", r))
 	log.Println("Successfully started")

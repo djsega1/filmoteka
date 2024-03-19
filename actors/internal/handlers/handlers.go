@@ -8,6 +8,7 @@ import (
 
 	"github.com/djsega1/filmoteka/actors/internal/models"
 	"github.com/djsega1/filmoteka/actors/internal/repository"
+	"github.com/gorilla/mux"
 )
 
 type actorsHandler struct {
@@ -35,7 +36,43 @@ func (h *actorsHandler) CreateActor(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-/*
 func (h *actorsHandler) GetAllActors(w http.ResponseWriter, r *http.Request) {
-	all, err := repository.Repository.FindAll(repo, context.TODO())
-}*/
+	all, err := h.repository.FindAll(context.TODO())
+
+	if err != nil {
+		w.WriteHeader(400)
+		log.Println(err)
+		return
+	}
+
+	allBytes, err := json.Marshal(all)
+	if err != nil {
+		w.WriteHeader(500)
+		log.Println(err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(allBytes)
+}
+
+func (h *actorsHandler) GetActorByID(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	actor, err := h.repository.FindOne(context.TODO(), vars["id"])
+
+	if err != nil {
+		w.WriteHeader(404)
+		log.Println(err)
+		return
+	}
+
+	allBytes, err := json.Marshal(actor)
+	if err != nil {
+		w.WriteHeader(500)
+		log.Println(err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(allBytes)
+}

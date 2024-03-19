@@ -53,7 +53,7 @@ func (r *ActorsRepository) Create(ctx context.Context, actor *models.Actor) erro
 
 func (r *ActorsRepository) FindAll(ctx context.Context) (actors []models.Actor, err error) {
 	q := `
-		SELECT id, name FROM actors;
+		SELECT id, name, gender, CAST(birthdate AS TEXT) FROM actors;
 	`
 	log.Printf("SQL Query: %s", utils.FormatQuery(q))
 
@@ -67,7 +67,8 @@ func (r *ActorsRepository) FindAll(ctx context.Context) (actors []models.Actor, 
 	for rows.Next() {
 		var actor models.Actor
 
-		err = rows.Scan(&actor.ID, &actor.Name)
+		log.Println(rows.Values())
+		err = rows.Scan(&actor.ID, &actor.Name, &actor.Gender, &actor.Birthdate)
 		if err != nil {
 			return nil, err
 		}
@@ -84,12 +85,12 @@ func (r *ActorsRepository) FindAll(ctx context.Context) (actors []models.Actor, 
 
 func (r *ActorsRepository) FindOne(ctx context.Context, id string) (models.Actor, error) {
 	q := `
-		SELECT id, name FROM actors WHERE id = $1
+		SELECT id, name, gender, CAST(birthdate AS TEXT) FROM actors WHERE id = $1
 	`
 	log.Printf("SQL Query: %s", utils.FormatQuery(q))
 
 	var actor models.Actor
-	err := r.client.QueryRow(ctx, q, id).Scan(&actor.ID, &actor.Name)
+	err := r.client.QueryRow(ctx, q, id).Scan(&actor.ID, &actor.Name, &actor.Gender, &actor.Birthdate)
 	if err != nil {
 		return models.Actor{}, err
 	}
