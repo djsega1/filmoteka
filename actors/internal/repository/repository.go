@@ -17,7 +17,7 @@ type Repository interface {
 	FindAll(ctx context.Context) (actors []models.Actor, err error)
 	FindOne(ctx context.Context, id string) (models.Actor, error)
 	Update(ctx context.Context, actor models.Actor) error
-	Delete(ctx context.Context, id string) error
+	Delete(ctx context.Context, id string) (string, error)
 }
 
 type ActorsRepository struct {
@@ -53,7 +53,7 @@ func (r *ActorsRepository) Create(ctx context.Context, actor *models.Actor) erro
 
 func (r *ActorsRepository) FindAll(ctx context.Context) (actors []models.Actor, err error) {
 	q := `
-		SELECT id, name, gender, CAST(birthdate AS TEXT) FROM actors;
+		SELECT id, name, gender, CAST(birthdate AS TEXT) FROM actors WHERE is_deleted = false;
 	`
 	log.Printf("SQL Query: %s", utils.FormatQuery(q))
 
@@ -85,7 +85,7 @@ func (r *ActorsRepository) FindAll(ctx context.Context) (actors []models.Actor, 
 
 func (r *ActorsRepository) FindOne(ctx context.Context, id string) (models.Actor, error) {
 	q := `
-		SELECT id, name, gender, CAST(birthdate AS TEXT) FROM actors WHERE id = $1
+		SELECT id, name, gender, CAST(birthdate AS TEXT) FROM actors WHERE id = $1 AND is_deleted = false
 	`
 	log.Printf("SQL Query: %s", utils.FormatQuery(q))
 
@@ -99,13 +99,55 @@ func (r *ActorsRepository) FindOne(ctx context.Context, id string) (models.Actor
 }
 
 func (r *ActorsRepository) Update(ctx context.Context, actor models.Actor) error {
-	//TODO implement me
-	panic("implement me")
+	q := `
+		UPDATE actors SET
+		    (name, gender, birthdate) 
+		=
+			($1, $2, $3)
+		WHERE id = $4 and is_deleted = false
+		RETURNING id
+	`
+
+	log.Printf("SQL Query: %s", utils.FormatQuery(q))
+	if err := r.client.QueryRow(ctx, q, actor.Name, actor.Gender, actor.Birthdate, actor.ID).Scan(&actor.ID); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			pgErr = err.(*pgconn.PgError)
+			newErr := fmt.Errorf(
+				"SQL Error: %s, Detail: %s, Where: %s, Code: %s, SQLState: %s",
+				pgErr.Message, pgErr.Detail, pgErr.Where, pgErr.Code, pgErr.SQLState(),
+			)
+			log.Println(newErr)
+			return newErr
+		}
+		return err
+	}
+
+	return nil
 }
 
-func (r *ActorsRepository) Delete(ctx context.Context, id string) error {
-	//TODO implement me
-	panic("implement me")
+func (r *ActorsRepository) Delete(ctx context.Context, id string) (string, error) {
+	q := `
+		UPDATE actors SET is_deleted = true WHERE id = $1
+		RETURNING CAST(id AS TEXT)
+	`
+
+	log.Printf("SQL Query: %s", utils.FormatQuery(q))
+	if err := r.client.QueryRow(ctx, q, id).Scan(&id); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			pgErr = err.(*pgconn.PgError)
+			newErr := fmt.Errorf(
+				"SQL Error: %s, Detail: %s, Where: %s, Code: %s, SQLState: %s",
+				pgErr.Message, pgErr.Detail, pgErr.Where, pgErr.Code, pgErr.SQLState(),
+			)
+			log.Println(newErr)
+			return "", newErr
+		}
+		return "", err
+	}
+
+	return "acknowledged", nil
 }
 
 func NewActorsRepository(pool *pgxpool.Pool) Repository {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -13,10 +14,6 @@ import (
 )
 
 func main() {
-
-	//actorsSubR.HandleFunc("/actors", handlers.GetActorsList).Methods(http.MethodGet)
-	//actorsSubR.HandleFunc("/actors", handlers.GetActorsList).Methods(http.MethodGet)
-
 	cfg_path := "configs/config.yml"
 
 	cfg := config.GetConfig(cfg_path)
@@ -30,9 +27,11 @@ func main() {
 	r := mux.NewRouter()
 	actorsSubR := r.PathPrefix("/api/v1").Subrouter()
 	actorsSubR.HandleFunc("/actors", actorsHandler.GetAllActors).Methods(http.MethodGet)
+	actorsSubR.HandleFunc("/actors", actorsHandler.CreateActor).Methods(http.MethodPost)
 	actorsSubR.HandleFunc("/actors/{id:[0-9]+}", actorsHandler.GetActorByID).Methods(http.MethodGet)
-	actorsSubR.HandleFunc("/actors/create", actorsHandler.CreateActor).Methods(http.MethodPost)
+	actorsSubR.HandleFunc("/actors/{id:[0-9]+}", actorsHandler.UpdateActorByID).Methods(http.MethodPatch)
+	actorsSubR.HandleFunc("/actors/{id:[0-9]+}", actorsHandler.DeleteActorByID).Methods(http.MethodDelete)
 
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%s", cfg.Listen.BindIP, cfg.Listen.Port), r))
 	log.Println("Successfully started")
 }

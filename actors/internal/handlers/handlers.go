@@ -76,3 +76,52 @@ func (h *actorsHandler) GetActorByID(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(allBytes)
 }
+
+func (h *actorsHandler) UpdateActorByID(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	actor, err := h.repository.FindOne(context.TODO(), vars["id"])
+
+	if err != nil {
+		w.WriteHeader(404)
+		log.Println(err)
+		return
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&actor); err != nil {
+		w.WriteHeader(500)
+		log.Println(err)
+		http.Error(w, "Error decoding request body at CreateActor", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.repository.Update(context.TODO(), actor); err != nil {
+		w.WriteHeader(500)
+		log.Println(err)
+		http.Error(w, "Error updating actor at UpdateActorByID", http.StatusBadRequest)
+		return
+	}
+
+	allBytes, err := json.Marshal(actor)
+	if err != nil {
+		w.WriteHeader(500)
+		log.Println(err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(allBytes)
+}
+
+func (h *actorsHandler) DeleteActorByID(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	response, err := h.repository.Delete(context.TODO(), vars["id"])
+
+	if err != nil {
+		w.WriteHeader(404)
+		log.Println(err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(response))
+}

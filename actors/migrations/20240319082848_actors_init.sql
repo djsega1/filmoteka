@@ -7,6 +7,7 @@ CREATE TABLE actors (
     name text NOT NULL,
     gender gender,
     birthdate date NOT NULL,
+    is_deleted boolean NOT NULL DEFAULT false,
     PRIMARY KEY(id)
 );
 -- +goose StatementEnd
